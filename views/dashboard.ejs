@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>Dynamic Search</title>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+      charset="utf-8"
+    />
+
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe"
+      crossorigin="anonymous"
+    ></script>
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ"
+      crossorigin="anonymous"
+    />
+  </head>
+
+  <body>
+    <div class="container">
+      <h1>Dynamic Search</h1>
+      <div class="form-group mt-4">
+        <label for="searchInput">Search:</label>
+        <input
+          type="text"
+          class="form-control"
+          id="search"
+          placeholder="Enter search query"
+          autocomplete="off"
+        />
+      </div>
+
+      <div>
+        <div class="container mt-4">
+          <label for="searchInput">enter longitude:</label>
+          <input
+            type="text"
+            class="form-control"
+            id="searchLong"
+            placeholder="Enter longitude "
+            autocomplete="off"
+          />
+          <label for="searchInput">enter latitude:</label>
+          <input
+            type="text"
+            class="form-control"
+            id="searchLat"
+            placeholder="Enter latitude "
+            autocomplete="off"
+          />
+        </div>
+        <button class="btn btn-primary" id="searchButton">Search</button>
+        <button class="btn btn-primary" id="downloadButton">Download</button>
+        <button class="btn btn-primary" id="CoButton">Go by coordinates</button>
+      </div>
+      <table class="table table-striped mt-4" id="results">
+        <!-- <thead>
+          <tr>
+            <th>name</th>
+            <th>PATAA_CODE</th>
+            <th>ZIP_CODE</th>
+            <th>address</th>
+            <th>COUNTRY_NAME</th>
+            <th>STATE_NAME</th>
+            <th>CITY_NAME</th>
+            <th>GEO_LOCATION</th>
+            <th>score</th>
+
+            Add more columns as needed
+          </tr>
+        </thead> -->
+        <tbody id="results_body">
+          <!-- Results will be dynamically added here -->
+        </tbody>
+      </table>
+    </div>
+
+    <script type="text/javascript">
+      const searchInput = document.querySelector("#search");
+      const results_body = document.querySelector("#results_body");
+      const searchClick = document.querySelector("#searchButton");
+      const downloadClick = document.querySelector("#downloadButton");
+      const CoClick = document.querySelector("#CoButton");
+
+      let currentQuery = null;
+      let requestInProgress = false;
+      let request = null;
+      let downloadResults = null;
+      load_data();
+      // load_data2();
+
+      async function load_data(query) {
+        let html = ` <thead>
+          <tr>
+            <th>name</th>
+            <th>PATAA_CODE</th>
+            <th>ZIP_CODE</th>
+            <th>address</th>
+            <th>COUNTRY_NAME</th>
+            <th>STATE_NAME</th>
+            <th>CITY_NAME</th>
+            <th>GEO_LOCATION</th>
+            <th>score</th>
+       
+            <!-- Add more columns as needed -->
+          </tr>
+        </thead>`;
+
+        // downloadResults = null;
+        // to avoid aggregation of quuery results we use current query
+        currentQuery = query;
+        if (!query) {
+          displayNoQueryMessage();
+        } else if (isInputStringSpace(query)) {
+          html += `
+                <tr>
+                    <td colspan="10" class="text-center"> why s   p   a   c   e ??? 🙄${query}🙄  </td>
+                </tr>
+                `;
+          results_body.innerHTML = html;
+        } else {
+          if (request && requestInProgress) {
+            // Abort the previous request if it's still in progress
+            request.abort();
+          }
+
+          request = new XMLHttpRequest();
+          console.log("query : up : ", query, `/allInOne?q=${query}`);
+
+          request.open("POST", `/allInOne?q=${query}`);
+          request.setRequestHeader("Content-Type", "application/json");
+          requestInProgress = true; // Set the flag to indicate that a request is in progress
+
+          request.onload = () => {
+            if (query === currentQuery) {
+              if (request.status === 200) {
+                const results = JSON.parse(request.responseText);
+                // console.log("results :  : : ", results);
+
+                if (results?.length > 0) {
+                  results.forEach(async (result) => {
+                    html +=
+                      `
+                <tr>
+                    <td>` +
+                      result.name +
+                      `</td>
+                    <td>` +
+                      result.pataa_code +
+                      `</td>
+                    <td>` +
+                      result.zipcode +
+                      `</td>
+                    <td>` +
+                      result.address +
+                      `</td>
+                    <td>` +
+                      result.country_name +
+                      `</td>
+                    <td>` +
+                      result.state_name +
+                      `</td>
+                    <td>` +
+                      result.city_name +
+                      `</td>
+                    <td>` +
+                      result.geo_location +
+                      `</td>
+                    <td>` +
+                      result.Score +
+                      `</td>
+
+                </tr>
+                `;
+                  });
+                  results_body.innerHTML = html;
+                } else {
+                  html += `
+                <tr>
+                    <td colspan="10" class="text-center">No Data Found 🤷‍♀️🚧 </td>
+                </tr>
+                `;
+                }
+                results_body.innerHTML = html;
+                downloadResults = results;
+              } else {
+                console.log("Error fetching data:", request.status);
+              }
+            }
+            requestInProgress = false;
+          };
+
+          const que = JSON.stringify({ query });
+          request.send(que);
+        }
+      }
+
+
+
+
+
+
+      async function load_data2(query) {
+        console.log("queewe : ", query) ; 
+
+        var que = {query1 : query[0], query2 : query[1]};
+
+        console.log("queee : ", que) ; 
+
+        let html = ` <thead>
+          <tr>
+            <th>id</th>
+            <th>dist_nm</th>
+            <th>state_nm</th>
+            <th>ulb_nm_e</th>
+
+            <!-- Add more columns as needed -->
+          </tr>
+        </thead>`;
+
+        downloadResults = null;
+        currentQuery = query;
+        if (!query) {
+          displayNoQueryMessage();
+        } else if (isInputStringSpace1(query)) {
+          html += `
+                <tr>
+                    <td colspan="10" class="text-center"> why s   p   a   c   e ??? 🙄${query}🙄  </td>
+                </tr>
+                `;
+          results_body.innerHTML = html;
+        } else {
+          if (request && requestInProgress) {
+            // Abort the previous request if it's still in progress
+            request.abort();
+          }
+
+          request = new XMLHttpRequest();
+          console.log("query : up : ", query, `/allInOne2?q1=${que.query1}&q2=${que.query2}`);
+          request.open("POST", `/allInOne2?q1=${que.query1}&q2=${que.query2}`);
+          request.setRequestHeader("Content-Type", "application/json");
+          requestInProgress = true; // Set the flag to indicate that a request is in progress
+          request.onload = () => {
+            if (query === currentQuery) {
+              if (request.status === 200) {
+                const results = JSON.parse(request.responseText);
+                // console.log("results :  : : ", results);
+                if (results?.length > 0) {
+                  results.forEach(async (result) => {
+                    html +=
+                      `
+                <tr>
+                    <td>` +
+                      result.id +
+                      `</td>
+                    <td>` +
+                      result.dist_nm +
+                      `</td>
+                    <td>` +
+                      result.state_nm +
+                      `</td>
+                    <td>` +
+                      result.ulb_nm_e +
+                      `</td>
+                </tr>
+                `;
+                  });
+                  results_body.innerHTML = html;
+                } else {
+                  html += `
+                <tr>
+                    <td colspan="10" class="text-center">No Data Found 🤷‍♀️🚧 </td>
+                </tr>
+                `;
+                }
+                results_body.innerHTML = html;
+                downloadResults = results;
+              } else {
+                console.log("Error fetching data:", request.status);
+              }
+            }
+            requestInProgress = false;
+          };
+          
+                    que = JSON.stringify(que);
+
+          console.log("query : ", que );
+          request.send(que);
+        }
+      }
+
+      function displayNoQueryMessage() {
+        let html = `
+        <tr>
+          <td colspan="10" class="text-center">Type something in the search box! 👀</td>
+        </tr>
+      `;
+        results_body.innerHTML = html;
+      }
+
+      searchInput.addEventListener("input", () => {
+        const query = searchInput.value;
+        load_data(query);
+      });
+
+      searchClick.addEventListener("click", () => {
+        const query = searchInput.value;
+        load_data(query);
+      });
+
+      CoClick.addEventListener("click", () => {
+        const query = [searchLong.value, searchLat.value];
+        // const query = [79.92217635 , 24.86658655];
+        load_data2(query);
+      });
+
+      downloadClick.addEventListener("click", async () => {
+        const query = searchInput.value;
+        console.log("downloadResults", downloadResults);
+        // const raw_data = await (await fetch(url)).json();
+
+        const worksheet = XLSX.utils.json_to_sheet(downloadResults);
+        const workbook = XLSX.utils.book_new();
+        worksheet["!cols"] = [{ wch: 25 }, {}]; // Adjust the index if needed
+
+        XLSX.utils.book_append_sheet(workbook, worksheet, "SearchResults");
+        XLSX.writeFile(workbook, query + ".xlsx", { compression: true });
+
+        // const max_width = rows.reduce((w, r) => Math.max(w, r.name.length), 25);
+      });
+
+      function isInputStringSpace1(inputString) {
+        console.log("input string : ", inputString);
+        var stringWithoutSpaces0 = inputString[0].replace(/\s/g, "");
+        var stringWithoutSpaces1 = inputString[1].replace(/\s/g, "");
+
+        if (
+          stringWithoutSpaces0.length === 0 &&
+          stringWithoutSpaces1.length === 0
+        ) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+
+      function isInputStringSpace(inputString) {
+        var stringWithoutSpaces = inputString.replace(/\s/g, "");
+        if (stringWithoutSpaces.length === 0) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+    </script>
+  </body>
+</html>
