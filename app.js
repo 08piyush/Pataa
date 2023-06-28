@@ -25,6 +25,7 @@ app.get("/", (req, res) => {
 
 app.post("/allInOne", functions.allInOne3);
 app.post("/allInOne2", functions.allInOne32);
+app.post("/allInOneInsideOut", functions.allInOneInsideOut);
 
 // Setting Content Headers
 const allowCrossDomain = function (req, res, next) {
