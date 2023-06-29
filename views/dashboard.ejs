@@ -1,18 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<!--  META AND USEFUL SCRIPTS LINKS -->
+  <!--  META AND USEFUL SCRIPTS LINKS -->
   <head>
     <title>Dynamic Search</title>
-    <meta name="viewport"  content="width=device-width, initial-scale=1" charset="utf-8"    />
+    <style>
+      #map {
+        height: 400px;
+      }
+    </style>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1"
+      charset="utf-8"
+    />
     <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
     <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
-    <link href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" rel="stylesheet"/>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"    ></script>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet"      integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ"      crossorigin="anonymous" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe"
+    crossorigin="anonymous"
+  ></script>
+    
+  <link
+      href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+      integrity="sha384-KK94CHFLLe+nY2dmCWGMq91rCGa5gtU4mk92HdvYe+M/SXH301p5ILy+dN9+nJOZ"
+      crossorigin="anonymous"
+    />
   </head>
 
+
   <body>
+    <!-- STRUCTURE OF PAGE IS DEFINED HERE: FIELDS, BUTTONS AND RESULTS -->
     <div class="container">
       <h1>Dynamic Search</h1>
 
@@ -52,7 +76,7 @@
         <button class="btn btn-primary" id="downloadButton">Download</button>
         <button class="btn btn-primary" id="CoButton">Go by coordinates</button>
         <button class="btn btn-primary" id="markButton">Mark on map</button>
-      </div> 
+      </div>
 
       <!--  DISPLAY OUTPUT HERE  -->
       <table class="table table-striped mt-4" id="results">
@@ -76,29 +100,97 @@
         </tbody>
       </table>
     </div>
+    <div id="map"></div>
 
-    <div id="osm-map"></div>
-    
 
+
+
+
+
+    <!--  SCRIPT PART BEGIN -->
     <script type="text/javascript">
+      //  QUERY SELECTORS FROM HTML 
 
-      //  QUERY SELECTORS 
-      const searchInput = document.querySelector("#search");
-      const results_body = document.querySelector("#results_body");
-      const searchClick = document.querySelector("#searchButton");
-      const downloadClick = document.querySelector("#downloadButton");
-      const CoClick = document.querySelector("#CoButton");
-      const markButton = document.querySelector("#markButton");
+      const searchInput     = document.querySelector("#search");
+      const results_body    = document.querySelector("#results_body");
+      const searchClick     = document.querySelector("#searchButton");
+      const downloadClick   = document.querySelector("#downloadButton");
+      const CoClick         = document.querySelector("#CoButton");
+      const markButton      = document.querySelector("#markButton");
 
 
-      //   SOME USEFUL VARIABLE  
+      //  GLOBAL  VARIABLES
       let currentQuery = null;
       let requestInProgress = false;
       let request = null;
       let downloadResults = null;
-      load_data();
+      let map;
+      let osm;
+      let results_fetched; 
 
-      //   LOAD DATA FOR SEARCH 
+
+
+      //   EVENT LISTENERS
+
+      //  FOR SEARCH FIELD QUERY 
+      searchInput.addEventListener("input", () => {
+        const query = searchInput.value;
+        load_data(query);
+      });
+      
+      //  FOR SEARCH BUTTON CLICK 
+      searchClick.addEventListener("click", () => {
+        const query = searchInput.value;
+        load_data(query);
+      });
+      
+      //  FOR GO BY COORDINATES BUTTON 
+      CoClick.addEventListener("click", () => {
+        var long = searchLong.value;
+        var lat = searchLat.value;
+        const query = [long, lat];
+
+        load_data2(query);
+        // if (
+        //   typeof long !== "string" &&
+        //   typeof lat !== "string" &&
+        //   long !== null &&
+        //   lat !== null
+        // ) {
+        //   load_data2(query);
+        // } else {
+        //   var q = " ";
+        //   load_data(q);
+        // }
+      });
+      
+      //  FOR MARKING POINTS ON MAP 
+      markButton.addEventListener("click", () => {
+        reinitializeMap();
+      });
+      
+      //  FOR DOWNLOADING TABULAR RESULTS 
+      downloadClick.addEventListener("click", async () => {
+        const query = searchInput.value;
+        if (downloadResults) {
+          const worksheet = XLSX.utils.json_to_sheet(downloadResults);
+          const workbook = XLSX.utils.book_new();
+          worksheet["!cols"] = [{ wch: 25 }, {}]; // Adjust the index if needed
+          XLSX.utils.book_append_sheet(workbook, worksheet, "SearchResults");
+          XLSX.writeFile(workbook, query + ".xlsx", { compression: true });
+        }
+      });
+
+
+
+
+
+
+
+      //  FUNCTIONS CALLED FOR LOADING DATA 
+      
+      load_data();
+      //   LOAD DATA FOR SEARCH FIELDS 
       async function load_data(query) {
         let html = ` <thead>
           <tr>
@@ -116,8 +208,11 @@
           </tr>
         </thead>`;
 
-        // downloadResults = null;
-        // to avoid aggregation of quuery results we use current query
+        console.log("iam in search query");
+        downloadResults = null;
+        // to avoid aggregation of query results we use current query
+        // otherwise it would be showing the previously generated results
+        // which got delayed in fetching
         currentQuery = query;
         if (!query) {
           displayNoQueryMessage();
@@ -136,11 +231,9 @@
 
           request = new XMLHttpRequest();
           console.log("query : up : ", query, `/allInOne?q=${query}`);
-
           request.open("POST", `/allInOne?q=${query}`);
           request.setRequestHeader("Content-Type", "application/json");
           requestInProgress = true; // Set the flag to indicate that a request is in progress
-
           request.onload = () => {
             if (query === currentQuery) {
               if (request.status === 200) {
@@ -204,15 +297,13 @@
           request.send(que);
         }
       }
-
-      //  LOAD DATA FOR COORDINATES 
+      
+      
+      //  LOAD DATA FOR COORDINATES
       async function load_data2(query) {
-        console.log("queewe : ", query);
-
         var que = { query1: query[0], query2: query[1] };
 
-        console.log("queee : ", que);
-
+        console.log("que : ", que);
         let html = ` <thead>
           <tr>
             <th>id</th>
@@ -240,7 +331,6 @@
             // Abort the previous request if it's still in progress
             request.abort();
           }
-
           request = new XMLHttpRequest();
           console.log(
             "query : up : ",
@@ -298,141 +388,125 @@
           request.send(que);
         }
       }
-
-      //  MARK DATA ON MAP 
+      
+      
+      //  MARK DATA ON MAP
       async function load_data3() {
-
-
-
-        // if (request && requestInProgress) {
-        //     // Abort the previous request if it's still in progress
-        //     request.abort();
-        //   }
-          // map = null 
-          // element = null
-          // target = null 
-          // L = null 
-        var element = null 
-
+        // REQUEST IS CREATED
         request = new XMLHttpRequest();
         request.open("POST", `/allInOneInsideOut`);
         request.setRequestHeader("Content-Type", "application/json");
         requestInProgress = true; // Set the flag to indicate that a request is in progress
-
+        // REQUEST IS LOADED
         request.onload = () => {
           if (request.status === 200) {
-            const results = JSON.parse(request.responseText);
-            console.log("results from postgres : ", results);
-
-            element = document.getElementById('osm-map');
-            // Height has to be set. You can do this in CSS too.
-            element.style = 'height:400px;';
-            // Create Leaflet map on map element.
-            var map = L.map(element);
-            // Add OSM tile layer to the Leaflet map.
-            L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', { attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
-            
-            
-        var red = L.icon({
-          iconUrl: 'views\redIcon.png' , // URL to the marker image
-          // iconSize: [25, 41], // size of the icon image
-          iconAnchor: [12, 41], // anchor point of the icon (bottom center)
-        });
-
-
-        var blueIcon = L.icon({
-          iconUrl: 'blueIcon.png', // URL to the marker image
-          // iconSize: [25, 41], // size of the icon image
-          iconAnchor: [12, 41], // anchor point of the icon (bottom center)
-        });
-            for( var i = 0 ; i < results.length ; i++) {             // // Target's GPS coordinates.
-
-            // console.log(results[i].longitude, results[i].latitude); 
-
-            var target = L.latLng( results[i].latitude,results[i].longitude);
-            // // Set map's center to target with zoom 14.
-            
-            map.setView(target, 12);
-            // // Place a marker on the same location.
-            if (results[i].location === 'inside'){
-            L.marker(target).addTo(map);}
-            else{
-              L.marker(target, {icon : red}).addTo(map);
-
-            }
-            // results.length-- ; 
-            }
+            // RESULTS ARE FETCHED
+            results_fetched = JSON.parse(request.responseText);
+           //  THESE RESULTS ARE PASSED INTO MAP FUNCTIONS 
           } else {
             console.log("Error fetching data:", request.status);
-          }   
-          };
-          
+          }
+        };
+        // REQUEST IS SENT
         request.send();
       }
 
-      //  STARTING PAGE 
-      function displayNoQueryMessage() {
-        let html = `
-        <tr>
-          <td colspan="10" class="text-center">Type something in the search box! 👀</td>
-        </tr>
-      `;
-        results_body.innerHTML = html;
+
+
+
+
+
+
+     // FUNCTION TO LOAD AND REGENERATE MAP
+
+    //   TO INITIALISE MAP 
+     function initMap(results_fetched) {
+        map = L.map("map").setView([22.727183,75.854494], 12); // Place a marker on the same location.
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution:
+            'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors',
+          maxZoom: 18,
+        }).addTo(map);
+
+        var redIcon = L.icon({
+          iconUrl:
+            "https://www.pngkit.com/png/full/13-130702_google-location-icon-png-location-icon.png", // URL to the marker image
+          iconSize: [25, 41], // size of the icon image
+          iconAnchor: [12, 41], // anchor point of the icon (bottom center)
+        });
+        var blueIcon = L.icon({
+          iconUrl:
+            "https://www.pngkit.com/png/full/17-175946_location-vector-symbol-google-maps-marker-blue.png", // URL to the marker image
+          iconSize: [25, 41], // size of the icon image
+          iconAnchor: [12, 41], // anchor point of the icon (bottom center)
+        });
+
+        for (var i = 0; i < results_fetched.length; i++) {
+          // Target's GPS coordinates.
+          var target = L.latLng(results_fetched[i].latitude, results_fetched[i].longitude); 
+          // Place a marker on the same location.
+          if (results_fetched[i].location === "inside") {
+            L.marker(target, { icon: blueIcon }).addTo(map);
+          } else {
+            L.marker(target, { icon: redIcon }).addTo(map);
+          }
+           } }
+      
+    //  TO REMOVE MAP 
+      function removeMap() {
+        if (map) {
+          map.remove();
+        }
       }
-
-      //   EVENT LISTENERS 
-      searchInput.addEventListener("input", () => {
-        const query = searchInput.value;
-        load_data(query);
-      });
-
-      searchClick.addEventListener("click", () => {
-        const query = searchInput.value;
-        load_data(query);
-      });
-
-      CoClick.addEventListener("click", () => {
-        var long = searchLong.value;
-        var lat = searchLat.value;
-        const query = [long, lat];
-        if (
-          typeof long !== "string" &&
-          typeof lat !== "string" &&
-          long !== null &&
-          lat !== null
-        ) {
-          // const query = [79.92217635 , 24.86658655];
-          load_data2(query);
-        } else {
-          var q = " ";
-          load_data(q);
-        }
-      });
-
-      markButton.addEventListener("click", () => {
-        // var dropPoints = [];
-
+    
+    //  TO REINITIALISING MAP ON AFTER REMOVING ON SECOND CLICK
+      function reinitializeMap() {
+        removeMap(); // First, remove the existing map
         load_data3();
-      });
-
-      downloadClick.addEventListener("click", async () => {
-        const query = searchInput.value;
-        // console.log("downloadResults", downloadResults);
-        // const raw_data = await (await fetch(url)).json();
-        if( downloadResults ){
-        const worksheet = XLSX.utils.json_to_sheet(downloadResults);
-        const workbook = XLSX.utils.book_new();
-        worksheet["!cols"] = [{ wch: 25 }, {}]; // Adjust the index if needed
-
-        XLSX.utils.book_append_sheet(workbook, worksheet, "SearchResults");
-        XLSX.writeFile(workbook, query + ".xlsx", { compression: true });
+        setTimeout(()=>{
+          console.log("wwww ", results_fetched);
+        if(results_fetched){
+        initMap(results_fetched); // Then, initialize a new map
+      }
+        },1000)
         }
-        // const max_width = rows.reduce((w, r) => Math.max(w, r.name.length), 25);
-      });
 
 
 
-      //   EXTRA FUNCTIONS 
+
+
+
+
+      //  STARTING PAGE
+      function displayNoQueryMessage() {
+              let html = `
+              <tr>
+                <td colspan="10" class="text-center">Type something in the search box! 👀</td>
+              </tr>
+            `;
+              results_body.innerHTML = html;
+            }
+
+
+
+
+
+
+      // EXTRA FUNCTIONS TO AVOID EXCEPTIONAL CASES LIKE ONLY SPACES IN SEARCH FIELDS
+
+
+      // FOR SEARCH KEYWORD FIELD
+      function isInputStringSpace(inputString) {
+        var stringWithoutSpaces = inputString.replace(/\s/g, "");
+        if (stringWithoutSpaces.length === 0) {
+          return true;
+        } else {
+          return false;
+        }
+      }
+     
+     
+      // FOR LAT LONG FIELDS
       function isInputStringSpace1(inputString) {
         console.log("input string : ", inputString);
         var stringWithoutSpaces0 = inputString[0].replace(/\s/g, "");
@@ -447,18 +521,9 @@
           return false;
         }
       }
+ 
 
-      function isInputStringSpace(inputString) {
-        var stringWithoutSpaces = inputString.replace(/\s/g, "");
-        if (stringWithoutSpaces.length === 0) {
-          return true;
-        } else {
-          return false;
-        }
-      }
     </script>
-
-
-
+    <!-- SCRIPT PART END -->
   </body>
 </html>
