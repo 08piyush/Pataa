@@ -1,6 +1,8 @@
 const { PythonShell } = require("python-shell");
 const queries = require("../model/queries.js");
 
+
+//  FUNCTION TO RENDER SEARCH QUERY 
 module.exports.allInOne3 = async function (req, res) {
   var keyword = req.query.q;
   if(typeof keyword === "string"){
@@ -34,6 +36,8 @@ module.exports.allInOne3 = async function (req, res) {
   });
 };
 
+
+//  FUNCTION TO RENDER LAT LONG COORDINATES 
 module.exports.allInOne32 = async function (req, res) {
   const long = req.query.q1;
   const lat = req.query.q2;
@@ -49,10 +53,21 @@ module.exports.allInOne32 = async function (req, res) {
   }
 };
 
+
+//  FUNCTION TO RENDER MAP WITH INSIDE OUTSIDE MARKERS 
 module.exports.allInOneInsideOut = async function (req, res) {
+
+  const markPoints = req.query.q; 
   try {
-    const results = await queries.insideOut();
-    return res.status(200).send(results.rows);
+    //  QUERY FETCHING RESULTS FOR MARKERS 
+    const resultsMarkers = await queries.insideOut(markPoints);
+    // QUERY FETCHING RESULTS FOR BOUNDARIES 
+    const resultsBoundary = await queries.fetchBoundary();
+    var results = {
+      results1 : resultsMarkers.rows , 
+      results2 : resultsBoundary.rows[0].st_asgeojson
+    }
+    return res.status(200).send(results);
   } catch (err) {
     throw err;
   }
