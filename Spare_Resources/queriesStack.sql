@@ -37,6 +37,7 @@ SELECT  max(ST_AsText(geom)) AS boundary FROM districts;
 SELECT ST_AsText(ST_ExteriorRing(ST_GeometryN(geom, 1))) AS boundary FROM districts;
 
 
+
 SELECT ST_AsText(ST_Envelope(ST_Collect(geom))) AS boundary
 FROM districts;   
 
@@ -203,3 +204,8 @@ arr of coords :
  75.860012 22.653182 ,
 75.767340  22.711918  ,
  75.776472 22.663233  ]
+
+(75.911951,22.735507),(75.830495,22.688106),
+(75.844119,22.734721),(75.833455,22.727647),
+(75.969456,22.721861),(75.860012,22.653182),
+(75.767340,22.711918),(75.776472,22.663233)
