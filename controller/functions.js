@@ -1,5 +1,7 @@
 const { PythonShell } = require("python-shell");
 const queries = require("../model/queries.js");
+const wkx = require('wkx');
+var Buffer = require('buffer').Buffer;
 
 
 //  FUNCTION TO RENDER SEARCH QUERY 
@@ -41,8 +43,7 @@ module.exports.allInOne3 = async function (req, res) {
 module.exports.allInOne32 = async function (req, res) {
   const long = req.query.q1;
   const lat = req.query.q2;
-  values = [long, lat];
-  console.log("values : ", values);
+
   try {
     const results = await queries.getFromLL(long, lat);
     // console.log(results.rows);
@@ -56,16 +57,22 @@ module.exports.allInOne32 = async function (req, res) {
 
 //  FUNCTION TO RENDER MAP WITH INSIDE OUTSIDE MARKERS 
 module.exports.allInOneInsideOut = async function (req, res) {
-
   const markPoints = req.query.q; 
   try {
-    //  QUERY FETCHING RESULTS FOR MARKERS 
+    // QUERY FETCHING RESULTS FOR MARKERS 
     const resultsMarkers = await queries.insideOut(markPoints);
     // QUERY FETCHING RESULTS FOR BOUNDARIES 
     const resultsBoundary = await queries.fetchBoundary();
+    // QUERY FETCHING RESULTS FOR CENTROID 
+    const resultsCentroid = await queries.fetchCentroid() ; 
+    // CONVERTING INTO APPROAPRIATE FORMAT 
+    var wkbBuffer = new Buffer.from(resultsCentroid.rows[0].centroid, 'hex');
+    var geometry = wkx.Geometry.parse(wkbBuffer);
+
     var results = {
-      results1 : resultsMarkers.rows , 
-      results2 : resultsBoundary.rows[0].st_asgeojson
+      results1 : resultsMarkers.rows ,                    // MARKERS 
+      results2 : resultsBoundary.rows[0].st_asgeojson,    // BOUNDARY 
+      results3 : [geometry.y , geometry.x]                // CENTROID 
     }
     return res.status(200).send(results);
   } catch (err) {

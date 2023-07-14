@@ -5,7 +5,7 @@
     <title>Dynamic Search</title>
     <style>
       #map {
-        height: 400px;
+        height: 600px;
       }
     </style>
     <meta
@@ -17,17 +17,20 @@
     <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/leaflet@1.7.1/dist/leaflet.js"></script>
     <script
-    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"
-    integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe"
-    crossorigin="anonymous"
+      src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"
+      integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe"
+      crossorigin="anonymous"
     ></script>
-    <script> 
-    //  VARIABLES USED IN BELOW PROGRAM 
-    var red_image =  "https://www.pngkit.com/png/full/13-130702_google-location-icon-png-location-icon.png" 
-    var blue_image = "https://www.pngkit.com/png/full/17-175946_location-vector-symbol-google-maps-marker-blue.png"
-    var map_image = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" 
-    var map_attributes = 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors'
-    </script>  
+    <script>
+      //  VARIABLES USED IN BELOW PROGRAM
+      var red_image =
+        "https://www.pngkit.com/png/full/13-130702_google-location-icon-png-location-icon.png";
+      var blue_image =
+        "https://www.pngkit.com/png/full/17-175946_location-vector-symbol-google-maps-marker-blue.png";
+      var map_image = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
+      var map_attributes =
+        'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors';
+    </script>
     <link
       href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
       rel="stylesheet"
@@ -39,7 +42,6 @@
       crossorigin="anonymous"
     />
   </head>
-
 
   <body>
     <!-- STRUCTURE OF PAGE IS DEFINED HERE: FIELDS, BUTTONS AND RESULTS -->
@@ -81,7 +83,11 @@
         <!-- INPUT MARK POINTS HERE -->
         <div>
           <label for="markPoints">enter mark Points:</label>
-          <br> <h1 style="font-size: 4px ; color: #989898 ">format :  (75.833455, 22.727647),    (75.969456, 22.721861),    (75.860012, 22.653182)</h1>
+          <br />
+          <h1 style="font-size: 4px; color: #989898">
+            format : (75.833455, 22.727647), (75.969456, 22.721861), (75.860012,
+            22.653182)
+          </h1>
           <input
             type="text"
             class="form-control"
@@ -121,53 +127,48 @@
       </table>
     </div>
     <!-- DISPLAYING MAP HERE -->
-    <div id="map" ></div>
-
-
-
+    <div id="map"></div>
 
 
 
     <!--  SCRIPT PART BEGIN -->
     <script type="text/javascript">
-      
-      //  QUERY SELECTORS FROM HTML 
-      const searchInput     = document.querySelector("#search");
-      const results_body    = document.querySelector("#results_body");
-      const searchClick     = document.querySelector("#searchButton");
-      const downloadClick   = document.querySelector("#downloadButton");
-      const CoClick         = document.querySelector("#CoButton");
-      const markButton      = document.querySelector("#markButton");
-      const markPoints      = document.querySelector('#markPoints');
+
+      // QUERY SELECTORS FROM HTML  
+      const searchInput      = document.querySelector("#search");
+      const results_body     = document.querySelector("#results_body");
+      const searchClick      = document.querySelector("#searchButton");
+      const downloadClick    = document.querySelector("#downloadButton");
+      const CoClick          = document.querySelector("#CoButton");
+      const markButton       = document.querySelector("#markButton");
+      const markPoints       = document.querySelector("#markPoints");
 
       //  GLOBAL  VARIABLES
-      let currentQuery      = null;
+      let currentQuery = null;
       let requestInProgress = false;
-      let request           = null;
-      let downloadResults   = null;
+      let request = null;
+      let downloadResults = null;
       let map;
       let results_boundary;
-      let results_fetched; 
-
+      let results_fetched;
+      let results_centroid; 
 
 
       //   EVENT LISTENERS
 
-      //  EVENT LISTENER FOR SEARCH FIELD QUERY 
+      //  EVENT LISTENER FOR SEARCH FIELD QUERY
       searchInput.addEventListener("input", () => {
         const query = searchInput.value;
         load_data(query);
       });
-      
 
-      //  EVENT LISTENER  FOR SEARCH BUTTON CLICK 
+      //  EVENT LISTENER  FOR SEARCH BUTTON CLICK
       searchClick.addEventListener("click", () => {
         const query = searchInput.value;
         load_data(query);
-      });      
+      });
 
-
-      //  EVENT LISTENER FOR GO BY COORDINATES BUTTON 
+      //  EVENT LISTENER FOR GO BY COORDINATES BUTTON
       CoClick.addEventListener("click", () => {
         var long = searchLong.value;
         var lat = searchLat.value;
@@ -185,15 +186,13 @@
         //   load_data(q);
         // }
       });
-      
 
-      //  EVENT LISTENER FOR MARKING POINTS ON MAP 
+      //  EVENT LISTENER FOR MARKING POINTS ON MAP
       markButton.addEventListener("click", () => {
         reinitializeMap();
       });
-      
 
-      //  EVENT LISTENER FOR DOWNLOADING TABULAR RESULTS 
+      //  EVENT LISTENER FOR DOWNLOADING TABULAR RESULTS
       downloadClick.addEventListener("click", async () => {
         const query = searchInput.value;
         if (downloadResults) {
@@ -205,17 +204,11 @@
         }
       });
 
+      //  FUNCTIONS CALLED FOR LOADING DATA BY EVENT LISTENERS
 
-
-
-
-
-
-      //  FUNCTIONS CALLED FOR LOADING DATA BY EVENT LISTENERS 
-      
       // load_data();
 
-      //   LOAD DATA FOR SEARCH FIELDS 
+      //   LOAD DATA FOR SEARCH FIELDS
       async function load_data(query) {
         let html = ` <thead>
           <tr>
@@ -238,11 +231,11 @@
         // which got delayed in fetching
         currentQuery = query;
         if (!query) {
-          // DISPLAY NO QUERY MESSAGE 
+          // DISPLAY NO QUERY MESSAGE
           displayNoQueryMessage();
         } else if (isInputStringSpace(query)) {
-          //  DISPLAY WARNING WHEN SPACES 
-          displayWhySpace(); 
+          //  DISPLAY WARNING WHEN SPACES
+          displayWhySpace();
         } else {
           if (request && requestInProgress) {
             // Abort the previous request if it's still in progress
@@ -308,13 +301,7 @@
           request.send(que);
         }
       }
-      
-      
 
-
-
-
-      
       //  LOAD DATA FOR COORDINATES
       async function load_data2(query) {
         var que = { query1: query[0], query2: query[1] };
@@ -332,7 +319,7 @@
         if (!query) {
           displayNoQueryMessage();
         } else if (isInputStringSpace1(query)) {
-          displayWhySpace() ; 
+          displayWhySpace();
         } else {
           if (request && requestInProgress) {
             // Abort the previous request if it's still in progress
@@ -383,12 +370,6 @@
           request.send(que);
         }
       }
-      
-      
-
-
-
-
 
       //  LOAD DATA INTO RESULTS_FETCHED VARIABLE FROM DATABASE TO MARK ON MAP
       async function load_data3(query) {
@@ -397,13 +378,15 @@
         request.open("POST", `/allInOneInsideOut?q= ${query}`);
         request.setRequestHeader("Content-Type", "application/json");
         // REQUEST IS LOADED
-        request.onload = () =>  {
+        request.onload = () => {
           if (request.status === 200) {
-            // RESULTS ARE FETCHED AND STORED IN RESULTS_FETCHED VARIABLE 
-            var reqRes = JSON.parse(request.responseText); 
-           results_fetched = reqRes.results1;
-           results_boundary = JSON.parse(reqRes.results2); 
-           //  THESE RESULTS ARE PASSED INTO MAP FUNCTIONS 
+            // RESULTS ARE FETCHED AND STORED IN RESULTS_FETCHED VARIABLE
+            var reqRes = JSON.parse(request.responseText);
+            results_fetched = reqRes.results1;
+            results_boundary = JSON.parse(reqRes.results2);
+            results_centroid = reqRes.results3;
+         
+            //  THESE RESULTS ARE PASSED INTO MAP FUNCTIONS
           } else {
             console.log("Error fetching data:", request.status);
           }
@@ -414,36 +397,31 @@
 
 
 
+      // FUNCTION TO LOAD AND REGENERATE MAP
 
 
-
-
-     // FUNCTION TO LOAD AND REGENERATE MAP
-
-    //   TO INITIALISE MAP 
-    function initMap(results_fetched) {
+      //   TO INITIALISE MAP
+      function initMap(results_fetched) {
         // MAKING OBJECT MAP WITH CENTRE COORDINATES AND ZOOM VALUE
-        map = L.map("map").setView([22.727183,75.854494], 11); // Place a marker on the same location.
-        // ADDING MAP TO WEBPAGE 
+        map = L.map("map").setView(results_centroid, 11); // Place a marker on the same location.
+
+        // ADDING MAP TO WEBPAGE
         L.tileLayer(map_image, {
-          attribution:
-            map_attributes,
+          attribution: map_attributes,
           maxZoom: 18,
         }).addTo(map);
 
-        //  ADDING BOUNDARY TO THE MAP 
-          L.geoJSON(results_boundary).addTo(map);
+        //  ADDING BOUNDARY TO THE MAP
+        L.geoJSON(results_boundary).addTo(map);
         //  IMPORTING RED MARKER TO DISPLAY IN MAP
         var redIcon = L.icon({
-          iconUrl:
-            red_image, // URL to the marker image
+          iconUrl: red_image, // URL to the marker image
           iconSize: [25, 41], // size of the icon image
           iconAnchor: [12, 41], // anchor point of the icon (bottom center)
         });
-        //  IMPORTING BLUE MARKER TO DISPLAY IN MAP 
+        //  IMPORTING BLUE MARKER TO DISPLAY IN MAP
         var blueIcon = L.icon({
-          iconUrl:
-            blue_image, // URL to the marker image
+          iconUrl: blue_image, // URL to the marker image
           iconSize: [25, 41], // size of the icon image
           iconAnchor: [12, 41], // anchor point of the icon (bottom center)
         });
@@ -451,45 +429,45 @@
         //  FUNCTION TO ITERATIVELY MARK POINTS ON MAP 🚩
         for (var i = 0; i < results_fetched.length; i++) {
           // Target's GPS coordinates.
-          var target = L.latLng(results_fetched[i].latitude, results_fetched[i].longitude); 
+          var target = L.latLng(
+            results_fetched[i].latitude,
+            results_fetched[i].longitude
+          );
           // Place a marker on the same location.
           if (results_fetched[i].location === "inside") {
             L.marker(target, { icon: blueIcon }).addTo(map);
           } else {
             L.marker(target, { icon: redIcon }).addTo(map);
           }
-           } }
-      
-
-    //  TO REMOVE MAP FROM CONTAINER  
-    function removeMap() {
-      if (map) {
-        map.remove();
-      }
-    }
-  
-
-  //  TO REINITIALISING MAP ON AFTER REMOVING ON SECOND CLICK
-    async function reinitializeMap() {
-      var query =markPoints.value;
-      // console.log("query in markpoints : ", query);
-      if(isInputStringSpace(query)){
-        displayWhySpace();
-      }else if(!query){
-        displayNoQueryMessage();
-      }else{
-      removeMap(); // First, remove the existing map
-      await load_data3(query);  //FETCH DATA FROM DATABASE 
-      setTimeout(()=>{
-        console.log("FETCHED RESULTS : ", results_fetched);
-        if(results_fetched){
-        initMap(results_fetched); // Then, initialize a new map after 1 second
         }
-      },500)
-    }}
+      }
 
+      //  TO REMOVE MAP FROM CONTAINER
+      function removeMap() {
+        if (map) {
+          map.remove();
+        }
+      }
 
-
+      //  TO REINITIALISING MAP ON AFTER REMOVING ON SECOND CLICK
+      async function reinitializeMap() {
+        var query = markPoints.value;
+        // console.log("query in markpoints : ", query);
+        if (isInputStringSpace(query)) {
+          displayWhySpace();
+        } else if (!query) {
+          displayNoQueryMessage();
+        } else {
+          removeMap(); // First, remove the existing map
+          await load_data3(query); //FETCH DATA FROM DATABASE
+          setTimeout(() => {
+            console.log("FETCHED RESULTS : ", results_fetched);
+            if (results_fetched) {
+              initMap(results_fetched); // Then, initialize a new map after 1 second
+            }
+          }, 500);
+        }
+      }
 
 
 
@@ -505,7 +483,7 @@
           return false;
         }
       }
-     
+
       // FUNCTION TO HANDLE SPACES FOR LAT LONG FIELDS
       function isInputStringSpace1(inputString) {
         console.log("input string : ", inputString);
@@ -521,8 +499,8 @@
           return false;
         }
       }
- 
-      // FUNCTION TO DISPLAY NO QUERY MESSAGE 
+
+      // FUNCTION TO DISPLAY NO QUERY MESSAGE
       function displayNoQueryMessage() {
         let html = `
         <tr>
@@ -532,17 +510,17 @@
         results_body.innerHTML = html;
       }
 
-      // FUNCTION TO DISPLAY WARNING WHEN SPACE IS ENTERED 
+      // FUNCTION TO DISPLAY WARNING WHEN SPACE IS ENTERED
       function displayWhySpace() {
-         let html = `
+        let html = `
                 <tr>
                     <td colspan="10" class="text-center"> why s   p   a   c   e ??? 🙄🙄  </td>
                 </tr>
                 `;
-          results_body.innerHTML = html;
+        results_body.innerHTML = html;
       }
 
-      //  FUNCTION TO DISPLAY NO DATA FOUND MESSAGE 
+      //  FUNCTION TO DISPLAY NO DATA FOUND MESSAGE
       function displayNoDataFound() {
         let html = `
                 <tr>
@@ -550,8 +528,6 @@
                 </tr>
                 `;
       }
-
-
     </script>
     <!-- SCRIPT PART END -->
   </body>

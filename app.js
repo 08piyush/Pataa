@@ -5,7 +5,6 @@ const cors = require("cors");
 const functions = require("./controller/functions.js");
 const app = express();
 const bodyParser = require("body-parser");
-// const queries = require("./queries.js");
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: true}));
